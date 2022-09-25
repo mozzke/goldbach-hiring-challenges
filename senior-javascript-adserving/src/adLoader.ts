@@ -63,17 +63,24 @@ export default class AdLoader {
 
     filterForFittingSizes(domId: string, sizes: googletag.GeneralSize): googletag.GeneralSize {
         let fittingSizes: googletag.GeneralSize = [];
-
+        let domContainer = document.getElementById(domId);
+        //Height is always +2
+        let mulitiSizeContainer = [domContainer.offsetWidth, domContainer.offsetHeight - 2];
         for (let size of sizes) {
             // if Multisize [[300,250],[300,200]]
             if (Array.isArray(size) && this.checkSizeCondition(size)) {
-                fittingSizes.push(size);
+                if (JSON.stringify(size) === JSON.stringify(mulitiSizeContainer)) {
+                    fittingSizes.push(size);
+                }
             }
             // if SingleSize e.g. [300,250]
             else if (!Array.isArray(size) && sizes.length === 2) {
                 let singleSize = [sizes[0], sizes[1]] as googletag.SingleSize;
                 if (this.checkSizeCondition(singleSize)) {
-                    fittingSizes.push(singleSize);
+                    if (JSON.stringify(singleSize) === JSON.stringify(mulitiSizeContainer)) {
+                        fittingSizes.push(singleSize);
+                    }
+
                 }
             }
             //NamedSize "fluid" or ["fluid"]
