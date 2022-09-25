@@ -2,18 +2,18 @@ const gptUrl = "https://securepubads.g.doubleclick.net/tag/js/gpt.js";
 import ADSIZES from "../config/standardSizes";
 
 export default class AdLoader {
+    //observer for lazy loading
+    private observer: IntersectionObserver;
 
     constructor() {
-
         this.prepareGoogleAsyncApi();
-
         this.loadGoogleSDK().then(() => {
             this.initGoogleSDK();
         })
     }
 
     private prepareGoogleAsyncApi() {
-        window.googletag = (window as any).googletag || {cmd: []};
+        window.googletag = (window as any).googletag || { cmd: [] };
     }
 
     private loadGoogleSDK(): Promise<any> {
@@ -34,19 +34,35 @@ export default class AdLoader {
     }
 
     public registerAdSlot(domId: string, path: string) {
+        let activeAdSelector = document.getElementById(domId);
+
+        //Options for observable viewport
+        const options = {
+            rootMargin: '-6px 0px',
+            threshhold: 0.05
+        };
+
         googletag.cmd.push(() => {
+
             let sizes = this.filterForFittingSizes(domId, ADSIZES);
             let slot = googletag.defineSlot(path, sizes as googletag.MultiSize, domId).addService(googletag.pubads());
             //this is just for showing green boxed preview ads
-            slot.setTargeting("adpreview","dev")
+            slot.setTargeting("adpreview", "dev");
             googletag.enableServices();
-            //TODO: delay that function call till the element approaches viewport
-            googletag.display(domId);
+
+            // Observer for display function
+            this.observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) googletag.display(domId);
+                })
+            }, options);
+
+            if (activeAdSelector) this.observer.observe(activeAdSelector);
         });
     }
 
     filterForFittingSizes(domId: string, sizes: googletag.GeneralSize): googletag.GeneralSize {
-        let fittingSizes:googletag.GeneralSize = [];
+        let fittingSizes: googletag.GeneralSize = [];
 
         for (let size of sizes) {
             // if Multisize [[300,250],[300,200]]
@@ -55,8 +71,8 @@ export default class AdLoader {
             }
             // if SingleSize e.g. [300,250]
             else if (!Array.isArray(size) && sizes.length === 2) {
-                let singleSize = [sizes[0],sizes[1]] as googletag.SingleSize;
-                if (this.checkSizeCondition(singleSize)){
+                let singleSize = [sizes[0], sizes[1]] as googletag.SingleSize;
+                if (this.checkSizeCondition(singleSize)) {
                     fittingSizes.push(singleSize);
                 }
             }
